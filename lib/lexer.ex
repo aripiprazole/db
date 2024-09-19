@@ -3,7 +3,7 @@ defmodule Db.Lexer do
 
   @spec lex(String.t()) :: list
   def lex(input) do
-    ident_re = ~r(^[a-zA-Z]\w*)
+    ident_re = ~r(^[a-zA-Z][a-zA-Z0-9]\w*)
     number_re = ~r(^[0-9]+)
     string_re = ~r/^"(?:[^"\\]|\\.)*"/
     space_re = ~r(^[ \h\n]+)

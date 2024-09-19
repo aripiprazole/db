@@ -14,59 +14,67 @@ defmodule Db.Db do
     end
   end
 
-  def loop(_, _, _, lvl) when lvl < 0, do: raise("Invalid transaction level")
+  def loop(), do: loop(%{}, [], 0)
 
-  def loop(pid, db, snapshots, lvl) do
-    IO.write("> ")
+  def loop(_, _, lvl) when lvl < 0, do: raise("Invalid transaction level")
 
-    try do
-      {db, kind, result} =
-        IO.read(:stdio, :line)
-        |> Db.Lexer.lex()
-        |> Db.Term.parse()
-        |> Db.Eval.eval(db)
+  def loop(db, snapshots, lvl) do
+    receive do
+      {from, {:ok, input}} ->
+        try do
+          {db, kind, result} =
+            input
+            |> Db.Lexer.lex()
+            |> Db.Term.parse()
+            |> Db.Eval.eval(db)
 
-      case {kind, result} do
-        {:begin, _} ->
-          lvl = lvl + 1
-          send(pid, {:ok, {:number, lvl}})
-          loop(pid, db, [{lvl, db} | snapshots], lvl)
+          case {kind, result} do
+            {:begin, _} ->
+              lvl = lvl + 1
+              send(from, {:ok, {:number, lvl}})
+              loop(db, [{lvl, db} | snapshots], lvl)
 
-        {:commit, _} ->
-          lvl = lvl - 1
-          send(pid, {:ok, {:number, lvl}})
-          loop(pid, db, snapshots, lvl)
+            {:commit, _} ->
+              lvl = lvl - 1
+              send(from, {:ok, {:number, lvl}})
+              loop(db, snapshots, lvl)
 
-        {:rollback, _} ->
-          lvl = lvl - 1
-          {lvl, db, snapshots} = rollback(lvl, snapshots)
-          send(pid, {:ok, {:number, lvl}})
-          loop(pid, db, snapshots, lvl)
+            {:rollback, _} ->
+              lvl = lvl - 1
+              {lvl, db, snapshots} = rollback(lvl, snapshots)
+              send(from, {:ok, {:number, lvl}})
+              loop(db, snapshots, lvl)
 
-        _ ->
-          send(pid, result)
-          loop(pid, db, snapshots, lvl)
-      end
-    catch
-      RuntimeError, err ->
-        send(pid, {:err, err})
-        loop(pid, db, snapshots, lvl)
-
-      err ->
-        send(pid, {:err, err})
-        loop(pid, db, snapshots, lvl)
+            _ ->
+              send(from, {:ok, result})
+              loop(db, snapshots, lvl)
+          end
+        rescue
+          err in RuntimeError ->
+            send(from, {:err, err.message})
+            loop(db, snapshots, lvl)
+        catch
+          err ->
+            send(from, {:err, err})
+            loop(db, snapshots, lvl)
+        end
     end
   end
 
-  def handle() do
+  def handle(pid) do
+    IO.write("> ")
+    send(pid, {self(), {:ok, IO.read(:stdio, :line)}})
+
     receive do
       {:ok, value} -> IO.puts(Db.Term.show(value))
       {:err, message} -> IO.puts("ERR \"#{message}\"")
     end
+
+    handle(pid)
   end
 
   def main do
-    pid = spawn(fn -> handle() end)
-    loop(pid, %{}, [], 0)
+    input = spawn(Db.Db, :loop, [])
+    handle(input)
   end
 end
