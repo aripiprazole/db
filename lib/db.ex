@@ -16,6 +16,7 @@ defmodule Db.Db do
 
   def loop(), do: loop(%{}, [], 0)
 
+  @spec loop(any(), any(), any()) :: no_return()
   def loop(_, _, lvl) when lvl < 0, do: raise("Invalid transaction level")
 
   def loop(db, snapshots, lvl) do
@@ -32,7 +33,7 @@ defmodule Db.Db do
             {:begin, _} ->
               lvl = lvl + 1
               send(from, {:ok, {:number, lvl}})
-              loop(db, [{lvl, db} | snapshots], lvl)
+              loop(db, [{lvl - 1, db} | snapshots], lvl)
 
             {:commit, _} ->
               lvl = lvl - 1

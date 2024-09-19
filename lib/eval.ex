@@ -7,19 +7,8 @@ defmodule Db.Eval do
     end
   end
 
-  def eval({:get, name}, db) do
-    {db, :get, db[name]}
-  end
-
-  def eval(:begin, db) do
-    {db, :begin, nil}
-  end
-
-  def eval(:commit, db) do
-    {db, :commit, nil}
-  end
-
-  def eval(:rollback, db) do
-    {db, :rollback, nil}
-  end
+  def eval({:get, name}, db), do: {db, :get, db[name]}
+  def eval(:begin, db), do: {db, :begin, nil}
+  def eval(:commit, db), do: {db, :commit, nil}
+  def eval(:rollback, db), do: {db, :rollback, nil}
 end

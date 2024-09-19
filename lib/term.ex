@@ -1,4 +1,23 @@
 defmodule Db.Term do
+  alias Integer
+
+  @type t() ::
+          {:get, any()}
+          | {:set, any(), expr()}
+          | :begin
+          | :commit
+          | :rollback
+
+  @type expr() ::
+          {:number, any()}
+          | {:string, any()}
+          | {:ident, any()}
+          | true
+          | false
+          | nil
+          | list(expr())
+
+  @spec parse(list(Db.Lexer.t())) :: t()
   def parse([:set, {:ident, name}, value]), do: {:set, name, parse_expr(value)}
   def parse([:get, {:ident, name}]), do: {:get, name}
   def parse([:rollback]), do: :rollback
@@ -11,6 +30,7 @@ defmodule Db.Term do
   def parse([:commit | _]), do: raise("COMMIT - Syntax error")
   def parse(_), do: raise("Syntax error")
 
+  @spec parse_expr(false | nil | true | {:number, any()} | {:string, any()}) :: expr()
   def parse_expr({:number, value}), do: {:number, value}
   def parse_expr({:string, value}), do: {:string, value}
   def parse_expr(true), do: true
@@ -18,6 +38,7 @@ defmodule Db.Term do
   def parse_expr(nil), do: nil
   def parse_expr(_), do: raise("<valor> - Syntax error")
 
+  @spec show(expr()) :: String.t()
   def show([a, b]), do: "#{show(a)} #{show(b)}"
   def show({:number, value}), do: value
   def show({:string, value}), do: value

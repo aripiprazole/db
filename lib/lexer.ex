@@ -1,9 +1,22 @@
 defmodule Db.Lexer do
   alias Regex
 
-  @spec lex(String.t()) :: list
+  @type t() ::
+          :begin
+          | :commit
+          | :get
+          | :rollback
+          | :set
+          | true
+          | false
+          | nil
+          | {:number, any()}
+          | {:ident, any()}
+          | {:string, any()}
+
+  @spec lex(String.t()) :: list(t())
   def lex(input) do
-    ident_re = ~r(^[a-zA-Z][a-zA-Z0-9]\w*)
+    ident_re = ~r(^[a-zA-Z][a-zA-Z0-9]*)
     number_re = ~r(^[0-9]+)
     string_re = ~r/^"(?:[^"\\]|\\.)*"/
     space_re = ~r(^[ \h\n]+)
@@ -38,11 +51,12 @@ defmodule Db.Lexer do
           "GET" -> [:get | rest]
           "TRUE" -> [true | rest]
           "FALSE" -> [false | rest]
+          "NIL" -> [nil | rest]
           _ -> [{:ident, id} | rest]
         end
 
       true ->
-        raise "Syntax error #{input}"
+        raise "Lexical error"
     end
   end
 end
