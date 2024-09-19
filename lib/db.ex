@@ -1,8 +1,9 @@
 defmodule Db.Db do
   @moduledoc """
-  Documentation for `Db`.
+  Database CLI
   """
 
+  @spec rollback(any(), nonempty_maybe_improper_list()) :: {any(), any(), any()}
   def rollback(_, []), do: raise("Not in a transaction context")
   def rollback(desired_lvl, xs) when desired_lvl < 0, do: rollback(0, xs)
 
@@ -14,11 +15,13 @@ defmodule Db.Db do
     end
   end
 
+  @spec loop() :: no_return()
   def loop(), do: loop(%{}, [], 0)
 
-  @spec loop(any(), any(), any()) :: no_return()
+  @spec loop(any(), list(), integer()) :: no_return()
   def loop(_, _, lvl) when lvl < 0, do: raise("Invalid transaction level")
 
+  @spec loop(any(), list(), integer()) :: no_return()
   def loop(db, snapshots, lvl) do
     receive do
       {from, {:ok, input}} ->
@@ -74,7 +77,7 @@ defmodule Db.Db do
     handle(pid)
   end
 
-  def main do
+  def main(_) do
     input = spawn(Db.Db, :loop, [])
     handle(input)
   end
